@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Functions to read and visualise CloudSat and CALIPSO satellites data
-
-Some parts include modified code from the following open-source projects:
-    * ccplot (http://ccplot.org) Copyright (c) 2009-2015 Peter Kuma
-    * https://github.com/a301-teaching/classcode
+@author: D. E. Sergeev
 """
 from __future__ import division, print_function
 import datetime
@@ -29,13 +25,13 @@ def calipso_geodata(h5name, varnames=['Longitude', 'Latitude', 'Height', 'Profil
             #datetime.datetime.strptime(f['metadata'][0][1], '%Y-%m-%dT%H:%M:%S.%fZ')
             if proftime2datetime:
                 var_dict['Profile_UTC_Time'] = np.array([calipso_time2dt(t, tzinfo=None) for t in var_dict['Profile_UTC_Time']])
-        
+
         if return_list:
             return [var_dict[i] for i in varnames]
         else:
             return var_dict
-        
-        
+
+
 def calipso_read_data(h5name, data_field='Total_Attenuated_Backscatter_532', fillmask=False, return_units=True):
     with h5py.File(h5name,'r') as f:
         data_raw = f[data_field]
@@ -64,20 +60,21 @@ def cloudsat_geodata(h5name, varnames=['Longitude','Latitude', 'Height', 'Profil
             if 'Data Fields' in f[ikey]:
                 topkey = ikey
                 break
-                
+
         var_dict = {}
         for ivar in varnames:
             fld_dtype = f[topkey]['Geolocation Fields'][ivar].value[0][0].dtype
             var_dict[ivar] = f[topkey]['Geolocation Fields'][ivar].value.astype(fld_dtype)
-            
+
         if 'Profile_time' in var_dict:
-            start_time = datetime.datetime.strptime(f[topkey]['Swath Attributes']['start_time'][0][0], '%Y%m%d%H%M%S')
+            start_time = f[topkey]['Swath Attributes']['start_time'][0][0].decode('UTF-8')
+            start_time = datetime.datetime.strptime(start_time, '%Y%m%d%H%M%S')
             if proftime2datetime:
                 var_dict['Profile_time'] = np.array([start_time + datetime.timedelta(seconds=float(i)) for i in var_dict['Profile_time']])
-            
+
         if 'DEM_elevation' in var_dict:
             var_dict['DEM_elevation'][var_dict['DEM_elevation']<0] = 0.
-        
+
         if return_list:
             return [var_dict[i] for i in varnames]
         else:
@@ -90,26 +87,26 @@ def cloudsat_read_data(h5name, data_field='Radar_Reflectivity', limits=None, fil
             if 'Data Fields' in f[ikey]:
                 topkey = ikey
                 break
-        
+
         data = f[topkey]['Data Fields'][data_field].value.astype(np.float32)
 
         missval = f[topkey]['Swath Attributes'][data_field+'.missing'].value[0][0]
         fillval = f[topkey]['Swath Attributes']['_FV_'+data_field].value[0][0]
-        
+
         for imask in [missval, fillval]:
             data = np.ma.masked_equal(data, imask)
-        
+
         if limits is not None:
             lim_mask = np.logical_or(data < limits[0], data > limits[1])
             data = np.ma.masked_equal(data, lim_mask)
-            
+
         if fillmask:
             data = data.filled(np.nan)
-            
+
         data_factor = f[topkey]['Swath Attributes'][data_field+'.factor'][0][0]
         data_offset = f[topkey]['Swath Attributes'][data_field+'.offset'][0][0]
         data = (data - data_offset) / data_factor
-        
+
     return data
 
 def cloudsat_read_cldclass(h5name):
@@ -129,7 +126,7 @@ def cloudsat_read_cldclass(h5name):
                       '7': 'Ns',
                       '8': 'DC'
                      }
-         
+
     return cldclass, cloudcodes
 
 def cc_interp2d(data, X, Z, x1, x2, nx, z1, z2, nz, use_numba=True):
@@ -139,7 +136,7 @@ def cc_interp2d(data, X, Z, x1, x2, nx, z1, z2, nz, use_numba=True):
         except ImportError:
             print('Unsuccessful numba import, using pure Python')
             use_numba = False
-    
+
     if use_numba:
         res = nb.jit()(_interp2d)(data, X, Z, x1, x2, nx, z1, z2, nz)
     else:
@@ -193,19 +190,18 @@ def _interp2d(data, X, Z, x1, x2, nx, z1, z2, nz):
 
 def calipso_time2dt(time, tzinfo=pytz.utc):
     """Convert float in format yymmdd.ffffffff to datetime."""
-
     d = int(time % 100)
     m = int((time-d) % 10000)
     y = int(time-m-d)
     return datetime.datetime(2000 + y//10000, m//100, d, tzinfo=tzinfo) + datetime.timedelta(time % 1)
 
 
-def get_cc_cmap(satname='cloudsat', cmap_dir=os.path.join(os.environ.get('PWD'),'ccsat_cmap/')):    
+def get_cc_cmap(satname='cloudsat', cmap_dir=os.path.join(os.environ.get('HOME'),'anaconda3/share/ccplot/cmap/')):
     if 'cloudsat' in satname.lower():
         cmap_file = os.path.join(cmap_dir, 'cloudsat-reflectivity.cmap')
     elif 'calipso' in satname.lower():
         cmap_file = os.path.join(cmap_dir, 'calipso-backscatter.cmap')
-    else: 
+    else:
         raise ValueError('Unrecognized satellite name')
     cmap = _cmap(cmap_file)
     cm = mpl.colors.ListedColormap(cmap['colors']/255.0)
@@ -214,7 +210,7 @@ def get_cc_cmap(satname='cloudsat', cmap_dir=os.path.join(os.environ.get('PWD'),
     cm.set_bad(cmap['bad']/255.0)
     norm = mpl.colors.BoundaryNorm(cmap['bounds'], cm.N)
     return dict(cmap=cm, norm=norm)
-                    
+
 
 def _cmap(filename):
     """Load colormap from file. The expected format of the file is:
@@ -283,9 +279,9 @@ def _cmap(filename):
                     if len(rgba) == 3:
                         rgba.append(255)
                     special.append(rgba)
-    except IOError, e:
+    except IOError as e:
         raise e
-    except ValueError, e:
+    except ValueError as e:
         raise ValueError("Error reading `%s' on line %d: %s" %
                          (filename, n+1, e))
 
