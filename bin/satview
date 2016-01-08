@@ -16,6 +16,7 @@ import numpy as np
 import os
 
 from sattools.avhrr import read_gtiff
+from sattools.utils import figview
 
 DESCR = """
 Open satellite image geotiff file, mark some locations and write their coordinates to text file.
@@ -25,40 +26,15 @@ def_out_fname = 'pmc_loc_time_ch4_20Mar-02Apr.txt'
 parser = argparse.ArgumentParser(os.path.basename(__file__),
                                  description=DESCR,
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("-f", "--input_file", nargs='?', required=True, help="File name(s)")
+parser.add_argument("-f", "--input_fname", nargs='?', required=True, help="File name(s)")
 parser.add_argument("--sort_fnames", type=bool, default=True, help="Sort input file names list")
 parser.add_argument("-id", "--track_id", type=int, required=True, help="Track id (e.g. id of a cyclone)")
-parser.add_argument("-o", "--output_file", type=str, default=def_out_fname, help="Name of text file where to write coordinates")
+parser.add_argument("-o", "--output_fname", type=str, default=def_out_fname, help="Name of text file where to write coordinates")
 
 parser.add_argument("--lonmin", type=float, default=-20., help="longitude of lower left hand corner of the desired map domain (degrees)")
 parser.add_argument("--lonmax", type=float, default=40., help="longitude of upper right hand corner of the desired map domain (degrees).")
 parser.add_argument("--latmin", type=float, default=65., help="latitude of lower left hand corner of the desired map domain (degrees).")
 parser.add_argument("--latmax", type=float, default=82., help="latitude of upper right hand corner of the desired map domain (degrees).")
-
-def figview(print2file=False,outdir=os.curdir, \
-            imgname='test_image',imgform='png',imgres=500, \
-            maxfig=False, tight=False):
-    if tight:
-        plt.tight_layout(pad=2)
-    if print2file:
-        imgname = os.path.join(outdir,imgname+'.'+imgform)
-        checkdir(outdir)
-        print('Saved as ' + imgname)
-        plt.savefig(imgname,dpi=imgres)
-        plt.close()
-    else:
-        if maxfig:
-            mpl_backend = plt.get_backend()
-            figManager = plt.get_current_fig_manager()
-            if   mpl_backend == 'Qt4Agg':
-                figManager.window.showMaximized()
-            elif mpl_backend == 'TkAgg':
-                figManager.window.state('zoomed')
-            elif mpl_backend == 'wxAgg':
-                figManager.frame.Maximize(True)
-            else:
-                print("Cannot maximize for: "+mpl_backend)
-        plt.show()
 
 class SatView(object):
     def __init__(self, file_names, out_file_name=''):
@@ -99,7 +75,7 @@ class SatView(object):
         self.fig.canvas.mpl_connect('button_press_event',self.on_click)
         self.cursor = Cursor(plt.gca(), useblit=True, color='red')
 
-        _figview(False,maxfig=True)
+        figview(False,maxfig=True)
 
     def on_click(self, event):
         if event.inaxes == self.ax:
@@ -177,4 +153,4 @@ if __name__ == '__main__':
     if args.sort_fnames:
          file_name_sat = sorted(file_name_sat)
 
-    SatView(file_name_sat, args.output_file)(args.track_id, args.lonmin, args.lonmax, args.latmin, args.latmax)
+    SatView(file_name_sat, args.output_fname)(args.track_id, args.lonmin, args.lonmax, args.latmin, args.latmax)

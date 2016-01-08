@@ -10,6 +10,8 @@ from __future__ import division, print_function
 import h5py
 import numpy as np
 
+from .utils import calipso_time2dt
+
 
 def calipso_geodata(h5name, varnames=['Longitude', 'Latitude', 'Height', 'Profile_UTC_Time'], proftime2datetime=True, return_list=False):
     with h5py.File(h5name,'r') as f:

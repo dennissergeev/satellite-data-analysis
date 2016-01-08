@@ -2,6 +2,7 @@
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 from osgeo import gdal
+import re
 
 def read_gtiff(fname):
     """

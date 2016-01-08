@@ -10,6 +10,7 @@ from __future__ import division, print_function
 import datetime
 import h5py
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pytz
@@ -85,7 +86,7 @@ def calipso_time2dt(time, tzinfo=pytz.utc):
     return datetime.datetime(2000 + y//10000, m//100, d, tzinfo=tzinfo) + datetime.timedelta(time % 1)
 
 
-def get_cc_cmap(satname='cloudsat', cmap_dir=default_cmap_dir)):
+def get_cc_cmap(satname='cloudsat', cmap_dir=default_cmap_dir):
     if 'cloudsat' in satname.lower():
         cmap_file = os.path.join(cmap_dir, 'cloudsat-reflectivity.cmap')
     elif 'calipso' in satname.lower():
@@ -182,3 +183,30 @@ def _cmap(filename):
         'over': np.array(special[1] if len(special) >= 2 else white),
         'bad': np.array(special[2] if len(special) >= 3 else white),
     }
+
+
+def figview(print2file=False,outdir=os.curdir, \
+            imgname='test_image',imgform='png',imgres=500, \
+            maxfig=False, tight=False):
+    if tight:
+        plt.tight_layout(pad=2)
+    if print2file:
+        imgname = os.path.join(outdir,imgname+'.'+imgform)
+        checkdir(outdir)
+        print('Saved as ' + imgname)
+        plt.savefig(imgname,dpi=imgres)
+        plt.close()
+    else:
+        if maxfig:
+            mpl_backend = plt.get_backend()
+            figManager = plt.get_current_fig_manager()
+            if   mpl_backend == 'Qt4Agg':
+                figManager.window.showMaximized()
+            elif mpl_backend == 'TkAgg':
+                figManager.window.state('zoomed')
+            elif mpl_backend == 'wxAgg':
+                figManager.frame.Maximize(True)
+            else:
+                print("Cannot maximize for: "+mpl_backend)
+        plt.show()
+
