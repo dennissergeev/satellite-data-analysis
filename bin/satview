@@ -1,7 +1,12 @@
+#!python
 # -*- coding: utf-8 -*-
 """
-@author: D. E. Sergeev
+Satellite imagery viewer in Python
+
+http://dennissergeev.github.io/satellite-imagery-viewer-in-python.html
 """
+from __future__ import print_function, absolute_division
+import argparse
 import datetime
 import glob
 import matplotlib.pyplot as plt
@@ -10,38 +15,56 @@ from mpl_toolkits.basemap import Basemap
 import numpy as np
 import os
 from osgeo import gdal
-# My modules
-import mypaths
-import plot_params as pp 
-from var_utils import str_input, int_input
 
-pmc_id = int_input('PMC id')
-outfname = str_input('Common output name','pmc_loc_time_ch4_20Mar-02Apr.txt')
-file_name_sat = [] 
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130325*.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130321*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130322*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130323*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130324*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130325*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130326*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130327*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130328*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130329*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130330*ch4.r8.tif')
-#file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130331*ch4.r8.tif')
-file_name_sat += glob.glob(mypaths.satdir + os.sep + '20130402*ch4.r8.tif')
-file_name_sat.sort()
+from sattools.geotiff import read_gtiff
 
-lon_min = -20.
-lon_max = 40.
-lat_min = 65.
-lat_max = 82.
+DESCR = """
+Open satellite image geotiff file, mark some locations and write their coordinates to text file.
+"""
+
+def_out_fname = 'pmc_loc_time_ch4_20Mar-02Apr.txt'
+parser = argparse.ArgumentParser(os.path.basename(__file__),
+                                 description=DESCR,
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("-f", "--input_file", nargs='?', required=True, help="File name(s)")
+parser.add_argument("--sort_fnames", type=bool, default=True, help="Sort input file names list")
+parser.add_argument("-id", "--track_id", type=int, required=True, help="Track id (e.g. id of a cyclone)")
+parser.add_argument("-o", "--output_file", type=str, default=def_out_fname, help="Name of text file where to write coordinates")
+
+parser.add_argument("--lonmin", type=float, default=-20., help="longitude of lower left hand corner of the desired map domain (degrees)")
+parser.add_argument("--lonmax", type=float, default=40., help="longitude of upper right hand corner of the desired map domain (degrees).")
+parser.add_argument("--latmin", type=float, default=65., help="latitude of lower left hand corner of the desired map domain (degrees).")
+parser.add_argument("--latmax", type=float, default=82., help="latitude of upper right hand corner of the desired map domain (degrees).")
+
+def figview(print2file=False,outdir=os.curdir, \
+            imgname='test_image',imgform='png',imgres=500, \
+            maxfig=False, tight=False):
+    if tight:
+        plt.tight_layout(pad=2)
+    if print2file:
+        imgname = os.path.join(outdir,imgname+'.'+imgform)
+        checkdir(outdir)
+        print('Saved as ' + imgname)
+        plt.savefig(imgname,dpi=imgres)
+        plt.close()
+    else:
+        if maxfig:
+            mpl_backend = plt.get_backend()
+            figManager = plt.get_current_fig_manager()
+            if   mpl_backend == 'Qt4Agg':
+                figManager.window.showMaximized()
+            elif mpl_backend == 'TkAgg':
+                figManager.window.state('zoomed')
+            elif mpl_backend == 'wxAgg':
+                figManager.frame.Maximize(True)
+            else:
+                print("Cannot maximize for: "+mpl_backend)
+        plt.show()
 
 class SatView(object):
-    def __init__(self,file_names,out_file_name=None):
+    def __init__(self, file_names, out_file_name=''):
         self.file_names = file_names
-        if out_file_name == None:
+        if out_file_name == '':
             self.out_file_name = 'pmc_loc_time_' + \
             os.path.basename(self.file_names[0]).split('.')[1] + '_' + \
             os.path.basename(self.file_names[0]).split('.')[0] + '-' + \
@@ -53,17 +76,14 @@ class SatView(object):
         self.lonlist = []
         self.latlist = []
 
-    def __call__(self,pmc_id,lon1=-180.,lon2=180.,lat1=-90.,lat2=90.,proj='mill',tick_incr=[1,1]):
-        self.pmc_id = pmc_id
+    def __call__(self,_id,lon1=-180.,lon2=180.,lat1=-90.,lat2=90.,proj='mill',tick_incr=[1,1]):
+        self._id = _id
         self.fig, self.ax = plt.subplots()
 
         self.bm = Basemap(projection='lcc',\
-                 llcrnrlon=-5,llcrnrlat=65,urcrnrlon=50.,urcrnrlat=80,\
-                 lat_1=70.,lat_2=80.,lon_0=25.,\
+                 llcrnrlon=lon1,llcrnrlat=lat1,urcrnrlon=lon2,urcrnrlat=lat2,\
+                 lat_1=lat1+2./3*(lat2-lat1), lat_2=lat2, lon_0=0.5*(lon1+lon2),\
                  resolution='l')
-        #self.bm = Basemap(projection=proj,llcrnrlon=lon1,llcrnrlat=lat1, \
-        #                  urcrnrlon=lon2,urcrnrlat=lat2, \
-        #                  resolution='i')
         
         ticklon = np.array(tick_incr)[0]
         try:
@@ -80,7 +100,7 @@ class SatView(object):
         self.fig.canvas.mpl_connect('button_press_event',self.on_click)
         self.cursor = Cursor(plt.gca(), useblit=True, color='red')
 
-        pp.figview(False,maxfig=True)
+        _figview(False,maxfig=True)
 
     def on_click(self, event):
         if event.inaxes == self.ax:
@@ -102,7 +122,7 @@ class SatView(object):
         
             if event.button == 3: # Right button
                 # Store data from the current frame
-                self.track.append(dict(pmc_id=self.pmc_id,time=self.time_raw,lon=self.lonlist,lat=self.latlist))
+                self.track.append(dict(_id=self._id,time=self.time_raw,lon=self.lonlist,lat=self.latlist))
                 # Next frame
                 self.ind += 1
                 if self.ind < len(self.file_names):
@@ -115,19 +135,19 @@ class SatView(object):
                         for ms in self.markers:
                             self.ax.lines.remove(ms[0])
                     #    for ms in self.markers:
-                    #        print ms
+                    #        print(ms)
                     #        ms.lines = []
                     # Read data for the next frame and plot it
                     self.get_data() # get lons, lats, arr
                     self.plot_data()
                     plt.draw()
                 else:
-                    print 'Reached the end of the file list'
+                    print('Reached the end of the file list')
                     plt.close()
 
     def write_xy(self):
         outf = open(self.out_file_name,'a')
-        outf.write(str(self.pmc_id)+\
+        outf.write(str(self._id)+\
         '\t'+self.time_raw+'\t'+'{0:.3f}\t{1:.3f}\n'.format(self.lonlist[-1],self.latlist[-1]))
         outf.close()
 
@@ -140,19 +160,7 @@ class SatView(object):
     def get_data(self):
         print('Reading: '+self.file_names[self.ind])
         self.get_time_str()
-        gtif = gdal.Open(self.file_names[self.ind])
-        trans = gtif.GetGeoTransform()
-        self.arr = gtif.ReadAsArray()
-        
-        nx = gtif.RasterXSize*trans[1]
-        ny = gtif.RasterYSize*trans[5]
-        x = np.arange(0, gtif.RasterXSize*trans[1],trans[1])
-        y = np.arange(0, gtif.RasterXSize*trans[5],trans[5])
-        xx, yy = np.meshgrid(x, y)
-        del gtif
-        
-        m = Basemap(projection='cass',lon_0=10.,lat_0=74, width=nx, height=ny)
-        self.lons, self.lats = m(xx,yy,inverse=True) 
+        self.lons, self.lats, self.arr = read_gtiff(self.file_names[self.ind])
 
     def get_time_str(self):
         # Get file name from the path and parse it assuming '.' is a delimiter
@@ -164,4 +172,10 @@ class SatView(object):
         self.time_raw = cur_file_name[0]
 
 if __name__ == '__main__':
-    SatView(file_name_sat,outfname)(pmc_id)
+    args = parser.parse_args()
+
+    file_name_sat = glob.glob(args.input_fname)
+    if args.sort_fnames:
+         file_name_sat = sorted(file_name_sat)
+
+    SatView(file_name_sat, args.output_file)(args.track_id, args.lonmin, args.lonmax, args.latmin, args.latmax)
