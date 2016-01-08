@@ -14,14 +14,14 @@ def read_gtiff(fname):
     gtif = gdal.Open(fname)
     arr = gtif.ReadAsArray()
     trans = gtif.GetGeoTransform()
-    
-    # Calculate image dimensions 
+
+    # Calculate image dimensions
     nx = gtif.RasterXSize*trans[1]
     ny = gtif.RasterYSize*trans[5]
     x = np.arange(0, gtif.RasterXSize*trans[1], trans[1])
     y = np.arange(0, gtif.RasterXSize*trans[5], trans[5])
     xx, yy = np.meshgrid(x, y)
-    
+
     # Set a map using the Cassini-Soldner projection
     lon0, lat0 = get_lonlat_from_proj_str(gtif.GetProjection())
     sat_m = Basemap(projection='cass',lon_0=lon0,lat_0=lat0, width=nx, height=ny)
@@ -36,7 +36,7 @@ def get_lonlat_from_proj_str(proj_str, lon_key='central_meridian',
     lon0 = _get_numvalue_by_str(proj_str, lon_key)
     lat0 = _get_numvalue_by_str(proj_str, lat_key)
 
-    return lon0, lat0    
+    return lon0, lat0
 
 
 def _get_numvalue_by_str(s, key):

@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Functions to read and visualise CALIPSO satellite data
-
-Some parts include modified code from the following open-source projects:
-    * ccplot (http://ccplot.org) Copyright (c) 2009-2015 Peter Kuma
-    * https://github.com/a301-teaching/classcode
 """
 from __future__ import division, print_function
 import h5py

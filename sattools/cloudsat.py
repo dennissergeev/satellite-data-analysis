@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Functions to read and visualise CloudSat data
-
-Some parts include modified code from the following open-source projects:
-    * ccplot (http://ccplot.org) Copyright (c) 2009-2015 Peter Kuma
-    * https://github.com/a301-teaching/classcode
 """
 from __future__ import division, print_function
 import datetime
@@ -14,7 +10,7 @@ import numpy as np
 from .utils import cc_interp2d
 
 
-def cloudsat_geodata(h5name, 
+def cloudsat_geodata(h5name,
                      varnames=['Longitude','Latitude', 'Height', 'Profile_time','DEM_elevation'],
                      proftime2datetime=True, return_list=False):
     with h5py.File(h5name,'r') as f:
@@ -72,7 +68,7 @@ def cloudsat_read_data(h5name, data_field='Radar_Reflectivity', limits=None, fil
     return data
 
 def cloudsat_read_cldclass(h5name):
-    """    
+    """
     Convert cloud scenario codes to one of the 8 classes
 
     source: http://disc.sci.gsfc.nasa.gov/measures/documentation/README.AIRS_CloudSat.pdf
