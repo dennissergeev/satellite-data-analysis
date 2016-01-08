@@ -1,0 +1,8 @@
+basemap
+h5py
+matplotlib
+netcdf4
+numpy
+osgeo
+pytz
+scipy
