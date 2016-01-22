@@ -10,9 +10,9 @@ import numpy as np
 from .utils import cc_interp2d
 
 
-def cloudsat_geodata(h5name,
-                     varnames=['Longitude','Latitude', 'Height', 'Profile_time','DEM_elevation'],
-                     proftime2datetime=True, return_list=False):
+def geodata(h5name,
+            varnames=['Longitude','Latitude', 'Height', 'Profile_time','DEM_elevation'],
+            proftime2datetime=True, return_list=False):
     with h5py.File(h5name,'r') as f:
         for ikey in f.keys():
             if 'Data Fields' in f[ikey]:
@@ -39,7 +39,13 @@ def cloudsat_geodata(h5name,
             return var_dict
 
 
-def cloudsat_read_data(h5name, data_field='Radar_Reflectivity', limits=None, fillmask=False):
+def read_data(h5name, data_field='Radar_Reflectivity', limits=None, fillmask=False):
+    """
+    Read CloudSat data from a HDF5 file and retrun a masked numpy array
+
+    #TODO: return units f['2B-CWC-RO']['Swath Attributes']['RO_liq_water_content.units'][0]
+    #TODO: iris interface
+    """
     with h5py.File(h5name, 'r') as f:
         for ikey in f.keys():
             if 'Data Fields' in f[ikey]:
@@ -67,7 +73,7 @@ def cloudsat_read_data(h5name, data_field='Radar_Reflectivity', limits=None, fil
 
     return data
 
-def cloudsat_read_cldclass(h5name):
+def read_cldclass(h5name):
     """
     Convert cloud scenario codes to one of the 8 classes
 

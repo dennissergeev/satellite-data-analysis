@@ -1,3 +1,4 @@
+from glob import glob
 import os
 from setuptools import setup
 
@@ -11,6 +12,8 @@ req_file = 'requirements.txt'
 REQUIRES = [line.rstrip('\n') for line in open(req_file)]
 
 scripts = ['bin/satview']
+data_files =  [('ccsat_cmap',
+    glob(os.path.join('ccsat_cmap','*')))]
 
 opts = dict(name=NAME,
             maintainer=MAINTAINER,
@@ -26,7 +29,9 @@ opts = dict(name=NAME,
             version=VERSION,
             packages=PACKAGES,
             requires=REQUIRES,
-            scripts=scripts)
+            scripts=scripts,
+            data_files=data_files
+            )
 
 
 if __name__ == '__main__':

@@ -1,0 +1,4 @@
+include LICENSE MANIFEST.in README.md setup.py
+include bin/satview
+recursive-include bin *
+recursive-include ccsat_cmap *

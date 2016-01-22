@@ -9,7 +9,7 @@ import numpy as np
 from .utils import calipso_time2dt
 
 
-def calipso_geodata(h5name, varnames=['Longitude', 'Latitude', 'Height', 'Profile_UTC_Time'], proftime2datetime=True, return_list=False):
+def geodata(h5name, varnames=['Longitude', 'Latitude', 'Height', 'Profile_UTC_Time'], proftime2datetime=True, return_list=False):
     with h5py.File(h5name,'r') as f:
         var_dict = {}
         for ivar in varnames:
@@ -30,7 +30,7 @@ def calipso_geodata(h5name, varnames=['Longitude', 'Latitude', 'Height', 'Profil
             return var_dict
 
 
-def calipso_read_data(h5name, data_field='Total_Attenuated_Backscatter_532', fillmask=False, return_units=True):
+def read_data(h5name, data_field='Total_Attenuated_Backscatter_532', fillmask=False, return_units=True):
     with h5py.File(h5name,'r') as f:
         data_raw = f[data_field]
         data_dtype = ''.join(data_raw.attrs['format'].lower().split('_'))
